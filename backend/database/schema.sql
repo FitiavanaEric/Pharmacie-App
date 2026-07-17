@@ -1,5 +1,6 @@
 -- ============================================================
 -- SCHEMA MYSQL - GESTION DE PHARMACIE
+-- Genere a partir du MLD (TD MERISE - City University)
 -- ============================================================
 
 CREATE TABLE fournisseur (

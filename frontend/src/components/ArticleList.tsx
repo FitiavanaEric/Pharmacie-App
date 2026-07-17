@@ -5,6 +5,7 @@ import {
   getArticles,
   getTypesArticle,
   getFournisseurs,
+  updateArticle,
 } from "../services/api";
 import type { Article, Fournisseur, TypeArticle } from "../types";
 
@@ -23,6 +24,7 @@ export default function ArticleList() {
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,19 +42,44 @@ export default function ArticleList() {
 
   useEffect(load, []);
 
+  function startCreate() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  }
+
+  function startEdit(a: Article) {
+    setEditingId(a.id_article);
+    setForm({
+      nomArticle: a.nom_article,
+      codeBarre: a.code_barre ?? "",
+      prixVente: String(a.prix_vente),
+      stockMinimum: String(a.stock_minimum),
+      idType: a.id_type ? String(a.id_type) : "",
+      idFournisseur: a.id_fournisseur ? String(a.id_fournisseur) : "",
+    });
+    setShowForm(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const payload = {
+      nomArticle: form.nomArticle,
+      codeBarre: form.codeBarre || undefined,
+      prixVente: Number(form.prixVente),
+      stockMinimum: Number(form.stockMinimum || 0),
+      idType: form.idType ? Number(form.idType) : undefined,
+      idFournisseur: form.idFournisseur ? Number(form.idFournisseur) : undefined,
+    };
     try {
-      await createArticle({
-        nomArticle: form.nomArticle,
-        codeBarre: form.codeBarre || undefined,
-        prixVente: Number(form.prixVente),
-        stockMinimum: Number(form.stockMinimum || 0),
-        idType: form.idType ? Number(form.idType) : undefined,
-        idFournisseur: form.idFournisseur ? Number(form.idFournisseur) : undefined,
-      });
+      if (editingId) {
+        await updateArticle(editingId, payload);
+      } else {
+        await createArticle(payload);
+      }
       setForm(emptyForm);
       setShowForm(false);
+      setEditingId(null);
       load();
     } catch (err: any) {
       setError(err.message);
@@ -70,7 +97,7 @@ export default function ArticleList() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-medium text-gray-900">Articles</h1>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => (showForm ? setShowForm(false) : startCreate())}
           className="text-sm bg-pharma-600 text-white px-3 py-1.5 rounded-md hover:bg-pharma-700"
         >
           {showForm ? "Annuler" : "Ajouter un article"}
@@ -86,6 +113,9 @@ export default function ArticleList() {
           onSubmit={handleSubmit}
           className="bg-white border border-gray-100 rounded-lg p-4 mb-4 grid grid-cols-2 gap-3"
         >
+          <p className="col-span-2 text-sm font-medium text-gray-900 -mb-1">
+            {editingId ? "Modifier l'article" : "Nouvel article"}
+          </p>
           <input
             required
             placeholder="Nom de l'article"
@@ -143,7 +173,7 @@ export default function ArticleList() {
             type="submit"
             className="col-span-2 bg-pharma-600 text-white text-sm py-2 rounded-md hover:bg-pharma-700"
           >
-            Enregistrer
+            {editingId ? "Enregistrer les modifications" : "Enregistrer"}
           </button>
         </form>
       )}
@@ -182,7 +212,13 @@ export default function ArticleList() {
                     </span>
                     <span className="text-gray-400"> / seuil {a.stock_minimum}</span>
                   </td>
-                  <td className="py-2 px-4 text-right">
+                  <td className="py-2 px-4 text-right space-x-3">
+                    <button
+                      onClick={() => startEdit(a)}
+                      className="text-xs text-pharma-700 hover:underline"
+                    >
+                      Modifier
+                    </button>
                     <button
                       onClick={() => handleDelete(a.id_article)}
                       className="text-xs text-red-600 hover:underline"

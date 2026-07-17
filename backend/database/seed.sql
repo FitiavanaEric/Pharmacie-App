@@ -1,3 +1,5 @@
+-- Donnees de demonstration
+
 INSERT INTO fournisseur (nom, adresse, telephone, email, num_rcm) VALUES
 ('Pharma Distrib SARL', 'Antananarivo, Analamanga', '020 22 123 45', 'contact@pharmadistrib.mg', 'RCM-001'),
 ('MediSupply Madagascar', 'Antananarivo, Ankorondrano', '020 22 987 65', 'ventes@medisupply.mg', 'RCM-002');

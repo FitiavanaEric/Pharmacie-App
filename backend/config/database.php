@@ -1,5 +1,8 @@
 <?php
-
+/**
+ * Connexion a la base MySQL via PDO.
+ * Adapte les identifiants ci-dessous a ton environnement local (XAMPP par defaut).
+ */
 
 function getConnection(): PDO
 {

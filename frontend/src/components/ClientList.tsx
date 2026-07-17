@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { createClient, deleteClient, getClients } from "../services/api";
+import { createClient, deleteClient, getClients, updateClient } from "../services/api";
 import type { Client } from "../types";
 
 const emptyForm = { nom: "", prenom: "", telephone: "", numAssure: "" };
-// Champs envoyes tels quels a clients.php, qui attend nom/prenom/telephone/numAssure (camelCase)
 
 export default function ClientList() {
   const [clients, setClients] = useState<Client[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,12 +17,34 @@ export default function ClientList() {
 
   useEffect(load, []);
 
+  function startCreate() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  }
+
+  function startEdit(c: Client) {
+    setEditingId(c.id_client);
+    setForm({
+      nom: c.nom,
+      prenom: c.prenom ?? "",
+      telephone: c.telephone ?? "",
+      numAssure: c.num_assure ?? "",
+    });
+    setShowForm(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await createClient(form as any);
+      if (editingId) {
+        await updateClient(editingId, form as any);
+      } else {
+        await createClient(form as any);
+      }
       setForm(emptyForm);
       setShowForm(false);
+      setEditingId(null);
       load();
     } catch (err: any) {
       setError(err.message);
@@ -40,7 +62,7 @@ export default function ClientList() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-medium text-gray-900">Clients</h1>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => (showForm ? setShowForm(false) : startCreate())}
           className="text-sm bg-pharma-600 text-white px-3 py-1.5 rounded-md hover:bg-pharma-700"
         >
           {showForm ? "Annuler" : "Ajouter un client"}
@@ -54,6 +76,9 @@ export default function ClientList() {
           onSubmit={handleSubmit}
           className="bg-white border border-gray-100 rounded-lg p-4 mb-4 grid grid-cols-2 gap-3"
         >
+          <p className="col-span-2 text-sm font-medium text-gray-900 -mb-1">
+            {editingId ? "Modifier le client" : "Nouveau client"}
+          </p>
           <input
             required
             placeholder="Nom"
@@ -83,7 +108,7 @@ export default function ClientList() {
             type="submit"
             className="col-span-2 bg-pharma-600 text-white text-sm py-2 rounded-md hover:bg-pharma-700"
           >
-            Enregistrer
+            {editingId ? "Enregistrer les modifications" : "Enregistrer"}
           </button>
         </form>
       )}
@@ -104,7 +129,10 @@ export default function ClientList() {
                 <td className="py-2 px-4">{c.nom} {c.prenom}</td>
                 <td className="py-2 px-4 text-gray-500">{c.telephone ?? "-"}</td>
                 <td className="py-2 px-4 text-gray-500">{c.num_assure ?? "-"}</td>
-                <td className="py-2 px-4 text-right">
+                <td className="py-2 px-4 text-right space-x-3">
+                  <button onClick={() => startEdit(c)} className="text-xs text-pharma-700 hover:underline">
+                    Modifier
+                  </button>
                   <button
                     onClick={() => handleDelete(c.id_client)}
                     className="text-xs text-red-600 hover:underline"

@@ -11,23 +11,22 @@ $id = $_GET['id'] ?? null;
 switch ($method) {
 
     case 'GET':
-        $stmt = $pdo->query("SELECT * FROM type_article ORDER BY libelle_type");
+        $stmt = $pdo->query("SELECT * FROM mutuelle ORDER BY nom_mutuelle");
         jsonResponse($stmt->fetchAll());
         break;
 
     case 'POST':
         $data = getRequestBody();
-        if (empty($data['libelleType'])) {
-            jsonError("Le libelle du type est requis");
+        if (empty($data['nomMutuelle'])) {
+            jsonError("Le nom de la mutuelle est requis");
         }
         $stmt = $pdo->prepare(
-            "INSERT INTO type_article (libelle_type, description, necessite_ordonnance)
-             VALUES (?, ?, ?)"
+            "INSERT INTO mutuelle (nom_mutuelle, taux_remboursement, contact) VALUES (?, ?, ?)"
         );
         $stmt->execute([
-            $data['libelleType'],
-            $data['description'] ?? null,
-            $data['necessiteOrdonnance'] ?? false,
+            $data['nomMutuelle'],
+            $data['tauxRemboursement'] ?? 0,
+            $data['contact'] ?? null,
         ]);
         jsonResponse(["success" => true, "id" => $pdo->lastInsertId()], 201);
         break;
@@ -36,20 +35,15 @@ switch ($method) {
         if (!$id) jsonError("Identifiant manquant");
         $data = getRequestBody();
         $stmt = $pdo->prepare(
-            "UPDATE type_article SET libelle_type = ?, description = ?, necessite_ordonnance = ? WHERE id_type = ?"
+            "UPDATE mutuelle SET nom_mutuelle = ?, taux_remboursement = ?, contact = ? WHERE id_mutuelle = ?"
         );
-        $stmt->execute([
-            $data['libelleType'],
-            $data['description'] ?? null,
-            $data['necessiteOrdonnance'] ?? false,
-            $id,
-        ]);
+        $stmt->execute([$data['nomMutuelle'], $data['tauxRemboursement'] ?? 0, $data['contact'] ?? null, $id]);
         jsonResponse(["success" => true]);
         break;
 
     case 'DELETE':
         if (!$id) jsonError("Identifiant manquant");
-        $stmt = $pdo->prepare("DELETE FROM type_article WHERE id_type = ?");
+        $stmt = $pdo->prepare("DELETE FROM mutuelle WHERE id_mutuelle = ?");
         $stmt->execute([$id]);
         jsonResponse(["success" => true]);
         break;

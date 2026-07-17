@@ -1,23 +1,18 @@
 import { useEffect, useState } from "react";
-import {
-  createFournisseur,
-  deleteFournisseur,
-  getFournisseurs,
-  updateFournisseur,
-} from "../services/api";
-import type { Fournisseur } from "../types";
+import { createMutuelle, deleteMutuelle, getMutuelles, updateMutuelle } from "../services/api";
+import type { Mutuelle } from "../types";
 
-const emptyForm = { nom: "", adresse: "", telephone: "", email: "" };
+const emptyForm = { nomMutuelle: "", tauxRemboursement: "", contact: "" };
 
-export default function FournisseurList() {
-  const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
+export default function MutuelleList() {
+  const [mutuelles, setMutuelles] = useState<Mutuelle[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    getFournisseurs().then(setFournisseurs).catch((e) => setError(e.message));
+    getMutuelles().then(setMutuelles).catch((e) => setError(e.message));
   }
 
   useEffect(load, []);
@@ -28,24 +23,28 @@ export default function FournisseurList() {
     setShowForm(true);
   }
 
-  function startEdit(f: Fournisseur) {
-    setEditingId(f.id_fournisseur);
+  function startEdit(m: Mutuelle) {
+    setEditingId(m.id_mutuelle);
     setForm({
-      nom: f.nom,
-      adresse: f.adresse ?? "",
-      telephone: f.telephone ?? "",
-      email: f.email ?? "",
+      nomMutuelle: m.nom_mutuelle,
+      tauxRemboursement: String(m.taux_remboursement),
+      contact: m.contact ?? "",
     });
     setShowForm(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const payload = {
+      nomMutuelle: form.nomMutuelle,
+      tauxRemboursement: Number(form.tauxRemboursement || 0),
+      contact: form.contact || undefined,
+    };
     try {
       if (editingId) {
-        await updateFournisseur(editingId, form as any);
+        await updateMutuelle(editingId, payload);
       } else {
-        await createFournisseur(form as any);
+        await createMutuelle(payload);
       }
       setForm(emptyForm);
       setShowForm(false);
@@ -57,20 +56,20 @@ export default function FournisseurList() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Supprimer ce fournisseur ?")) return;
-    await deleteFournisseur(id);
+    if (!confirm("Supprimer cette mutuelle ?")) return;
+    await deleteMutuelle(id);
     load();
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-medium text-gray-900">Fournisseurs</h1>
+        <h1 className="text-lg font-medium text-gray-900">Mutuelles</h1>
         <button
           onClick={() => (showForm ? setShowForm(false) : startCreate())}
           className="text-sm bg-pharma-600 text-white px-3 py-1.5 rounded-md hover:bg-pharma-700"
         >
-          {showForm ? "Annuler" : "Ajouter un fournisseur"}
+          {showForm ? "Annuler" : "Ajouter une mutuelle"}
         </button>
       </div>
 
@@ -82,31 +81,27 @@ export default function FournisseurList() {
           className="bg-white border border-gray-100 rounded-lg p-4 mb-4 grid grid-cols-2 gap-3"
         >
           <p className="col-span-2 text-sm font-medium text-gray-900 -mb-1">
-            {editingId ? "Modifier le fournisseur" : "Nouveau fournisseur"}
+            {editingId ? "Modifier la mutuelle" : "Nouvelle mutuelle"}
           </p>
           <input
             required
-            placeholder="Nom du fournisseur"
-            value={form.nom}
-            onChange={(e) => setForm({ ...form, nom: e.target.value })}
+            placeholder="Nom de la mutuelle"
+            value={form.nomMutuelle}
+            onChange={(e) => setForm({ ...form, nomMutuelle: e.target.value })}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm col-span-2"
           />
           <input
-            placeholder="Adresse"
-            value={form.adresse}
-            onChange={(e) => setForm({ ...form, adresse: e.target.value })}
-            className="border border-gray-200 rounded-md px-3 py-2 text-sm col-span-2"
-          />
-          <input
-            placeholder="Téléphone"
-            value={form.telephone}
-            onChange={(e) => setForm({ ...form, telephone: e.target.value })}
+            type="number"
+            step="0.01"
+            placeholder="Taux de remboursement (%)"
+            value={form.tauxRemboursement}
+            onChange={(e) => setForm({ ...form, tauxRemboursement: e.target.value })}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm"
           />
           <input
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            placeholder="Contact"
+            value={form.contact}
+            onChange={(e) => setForm({ ...form, contact: e.target.value })}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm"
           />
           <button
@@ -123,23 +118,23 @@ export default function FournisseurList() {
           <thead>
             <tr className="text-left text-gray-500 border-b border-gray-100">
               <th className="py-2 px-4 font-normal">Nom</th>
-              <th className="py-2 px-4 font-normal">Téléphone</th>
-              <th className="py-2 px-4 font-normal">Email</th>
+              <th className="py-2 px-4 font-normal">Taux</th>
+              <th className="py-2 px-4 font-normal">Contact</th>
               <th className="py-2 px-4 font-normal"></th>
             </tr>
           </thead>
           <tbody>
-            {fournisseurs.map((f) => (
-              <tr key={f.id_fournisseur} className="border-b border-gray-50">
-                <td className="py-2 px-4">{f.nom}</td>
-                <td className="py-2 px-4 text-gray-500">{f.telephone ?? "-"}</td>
-                <td className="py-2 px-4 text-gray-500">{f.email ?? "-"}</td>
+            {mutuelles.map((m) => (
+              <tr key={m.id_mutuelle} className="border-b border-gray-50">
+                <td className="py-2 px-4">{m.nom_mutuelle}</td>
+                <td className="py-2 px-4">{m.taux_remboursement}%</td>
+                <td className="py-2 px-4 text-gray-500">{m.contact ?? "-"}</td>
                 <td className="py-2 px-4 text-right space-x-3">
-                  <button onClick={() => startEdit(f)} className="text-xs text-pharma-700 hover:underline">
+                  <button onClick={() => startEdit(m)} className="text-xs text-pharma-700 hover:underline">
                     Modifier
                   </button>
                   <button
-                    onClick={() => handleDelete(f.id_fournisseur)}
+                    onClick={() => handleDelete(m.id_mutuelle)}
                     className="text-xs text-red-600 hover:underline"
                   >
                     Supprimer
