@@ -12,7 +12,7 @@ require_once __DIR__ . "/../config/database.php";
 $pdo = getConnection();
 
 $username = "admin";
-$password = "admin123"; // Change ce mot de passe apres la premiere connexion !
+$password = "admin123"; 
 $role = "admin";
 
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilisateur WHERE username = ?");
