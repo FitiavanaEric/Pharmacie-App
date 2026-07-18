@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { createLot, getArticles, getLots, updateLot } from "../services/api";
-import type { Article, Lot } from "../types";
+import { createLot, getArticles, getLots, getMagasins, updateLot } from "../services/api";
+import type { Article, Lot, Magasin } from "../types";
 
 const emptyForm = {
   numLot: "",
@@ -8,6 +8,7 @@ const emptyForm = {
   datePeremption: "",
   quantiteStock: "",
   emplacement: "",
+  idMagasin: "",
 };
 
 function isPerimeSoon(date: string) {
@@ -18,16 +19,18 @@ function isPerimeSoon(date: string) {
 export default function LotList() {
   const [lots, setLots] = useState<Lot[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    Promise.all([getLots(), getArticles()])
-      .then(([l, a]) => {
+    Promise.all([getLots(), getArticles(), getMagasins()])
+      .then(([l, a, m]) => {
         setLots(l);
         setArticles(a);
+        setMagasins(m);
       })
       .catch((e) => setError(e.message));
   }
@@ -48,6 +51,7 @@ export default function LotList() {
       datePeremption: l.date_peremption,
       quantiteStock: String(l.quantite_stock),
       emplacement: l.emplacement ?? "",
+      idMagasin: l.id_magasin ? String(l.id_magasin) : "",
     });
     setShowForm(true);
   }
@@ -68,6 +72,7 @@ export default function LotList() {
           datePeremption: form.datePeremption,
           quantiteStock: Number(form.quantiteStock),
           emplacement: form.emplacement || undefined,
+          idMagasin: form.idMagasin ? Number(form.idMagasin) : undefined,
         } as any);
       }
       setForm(emptyForm);
@@ -133,6 +138,20 @@ export default function LotList() {
             onChange={(e) => setForm({ ...form, quantiteStock: e.target.value })}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm"
           />
+          <select
+            required
+            disabled={!!editingId}
+            value={form.idMagasin}
+            onChange={(e) => setForm({ ...form, idMagasin: e.target.value })}
+            className="border border-gray-200 rounded-md px-3 py-2 text-sm disabled:bg-gray-50"
+          >
+            <option value="">Magasin</option>
+            {magasins.map((m) => (
+              <option key={m.id_magasin} value={m.id_magasin}>
+                {m.nom_magasin}
+              </option>
+            ))}
+          </select>
           <label className="text-xs text-gray-500 col-span-2 -mb-2">Date de péremption</label>
           <input
             required
@@ -163,6 +182,7 @@ export default function LotList() {
             <tr className="text-left text-gray-500 border-b border-gray-100">
               <th className="py-2 px-4 font-normal">Article</th>
               <th className="py-2 px-4 font-normal">Lot</th>
+              <th className="py-2 px-4 font-normal">Magasin</th>
               <th className="py-2 px-4 font-normal">Emplacement</th>
               <th className="py-2 px-4 font-normal">Quantité</th>
               <th className="py-2 px-4 font-normal">Péremption</th>
@@ -174,6 +194,7 @@ export default function LotList() {
               <tr key={l.id_lot} className="border-b border-gray-50">
                 <td className="py-2 px-4">{l.nom_article}</td>
                 <td className="py-2 px-4 text-gray-500">{l.num_lot}</td>
+                <td className="py-2 px-4 text-gray-500">{l.nom_magasin ?? "-"}</td>
                 <td className="py-2 px-4 text-gray-500">{l.emplacement ?? "-"}</td>
                 <td className="py-2 px-4">{l.quantite_stock}</td>
                 <td

@@ -4,7 +4,7 @@ require_once __DIR__ . "/../config/helpers.php";
 require_once __DIR__ . "/../config/auth_guard.php";
 
 sendCorsHeaders();
-requireAuth();
+requireRole(['admin']);
 
 $pdo = getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -13,22 +13,23 @@ $id = $_GET['id'] ?? null;
 switch ($method) {
 
     case 'GET':
-        $stmt = $pdo->query("SELECT * FROM mutuelle ORDER BY nom_mutuelle");
+        $stmt = $pdo->query("SELECT * FROM employe ORDER BY nom, prenom");
         jsonResponse($stmt->fetchAll());
         break;
 
     case 'POST':
         $data = getRequestBody();
-        if (empty($data['nomMutuelle'])) {
-            jsonError("Le nom de la mutuelle est requis");
+        if (empty($data['nom']) || empty($data['fonction'])) {
+            jsonError("Nom et fonction requis");
         }
         $stmt = $pdo->prepare(
-            "INSERT INTO mutuelle (nom_mutuelle, taux_remboursement, contact) VALUES (?, ?, ?)"
+            "INSERT INTO employe (nom, prenom, fonction, num_ordre_pharmacien) VALUES (?, ?, ?, ?)"
         );
         $stmt->execute([
-            $data['nomMutuelle'],
-            $data['tauxRemboursement'] ?? 0,
-            $data['contact'] ?? null,
+            $data['nom'],
+            $data['prenom'] ?? null,
+            $data['fonction'],
+            $data['numOrdrePharmacien'] ?? null,
         ]);
         jsonResponse(["success" => true, "id" => $pdo->lastInsertId()], 201);
         break;
@@ -37,15 +38,21 @@ switch ($method) {
         if (!$id) jsonError("Identifiant manquant");
         $data = getRequestBody();
         $stmt = $pdo->prepare(
-            "UPDATE mutuelle SET nom_mutuelle = ?, taux_remboursement = ?, contact = ? WHERE id_mutuelle = ?"
+            "UPDATE employe SET nom = ?, prenom = ?, fonction = ?, num_ordre_pharmacien = ? WHERE id_employe = ?"
         );
-        $stmt->execute([$data['nomMutuelle'], $data['tauxRemboursement'] ?? 0, $data['contact'] ?? null, $id]);
+        $stmt->execute([
+            $data['nom'],
+            $data['prenom'] ?? null,
+            $data['fonction'],
+            $data['numOrdrePharmacien'] ?? null,
+            $id,
+        ]);
         jsonResponse(["success" => true]);
         break;
 
     case 'DELETE':
         if (!$id) jsonError("Identifiant manquant");
-        $stmt = $pdo->prepare("DELETE FROM mutuelle WHERE id_mutuelle = ?");
+        $stmt = $pdo->prepare("DELETE FROM employe WHERE id_employe = ?");
         $stmt->execute([$id]);
         jsonResponse(["success" => true]);
         break;

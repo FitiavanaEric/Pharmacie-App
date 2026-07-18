@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/helpers.php";
+require_once __DIR__ . "/../config/auth_guard.php";
 
 sendCorsHeaders();
+requireAuth();
 
 $pdo = getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -52,6 +54,42 @@ switch ($method) {
 
         try {
             $pdo->beginTransaction();
+
+            // Controle : un article necessitant une ordonnance exige une ordonnance validee
+            // pour le client de cette vente
+            $stmtCheck = $pdo->prepare(
+                "SELECT a.nom_article, t.necessite_ordonnance
+                 FROM article a
+                 JOIN type_article t ON t.id_type = a.id_type
+                 WHERE a.id_article = ?"
+            );
+            $articlesSousOrdonnance = [];
+            foreach ($data['lignes'] as $ligne) {
+                $stmtCheck->execute([$ligne['idArticle']]);
+                $infoArticle = $stmtCheck->fetch();
+                if ($infoArticle && $infoArticle['necessite_ordonnance']) {
+                    $articlesSousOrdonnance[] = $infoArticle['nom_article'];
+                }
+            }
+
+            if (!empty($articlesSousOrdonnance)) {
+                if (empty($data['idClient'])) {
+                    throw new Exception(
+                        "Un client doit etre selectionne pour vendre : " . implode(", ", $articlesSousOrdonnance)
+                    );
+                }
+                $stmtOrdo = $pdo->prepare(
+                    "SELECT COUNT(*) FROM ordonnance
+                     WHERE id_client = ? AND statut_validation = 'Validee'
+                     AND date_ordonnance >= DATE_SUB(CURRENT_DATE, INTERVAL 90 DAY)"
+                );
+                $stmtOrdo->execute([$data['idClient']]);
+                if ($stmtOrdo->fetchColumn() == 0) {
+                    throw new Exception(
+                        "Ordonnance validee requise pour : " . implode(", ", $articlesSousOrdonnance)
+                    );
+                }
+            }
 
             $montantTotal = 0;
             foreach ($data['lignes'] as $ligne) {

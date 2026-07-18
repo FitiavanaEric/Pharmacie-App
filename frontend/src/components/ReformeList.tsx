@@ -1,30 +1,34 @@
 import { useEffect, useState } from "react";
-import { createReforme, deleteReforme, getArticles, getReformes } from "../services/api";
-import type { Article, Reforme } from "../types";
+import { createReforme, deleteReforme, getLots, getReformes } from "../services/api";
+import type { Lot, Reforme } from "../types";
 
-const emptyForm = { idArticle: "", quantite: "", motif: "", valeur: "" };
+const emptyForm = { idLot: "", quantite: "", motif: "", valeur: "" };
 
 export default function ReformeList() {
   const [reformes, setReformes] = useState<Reforme[]>([]);
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [lots, setLots] = useState<Lot[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    Promise.all([getReformes(), getArticles()]).then(([r, a]) => {
+    Promise.all([getReformes(), getLots()]).then(([r, l]) => {
       setReformes(r);
-      setArticles(a);
+      setLots(l.filter((x) => x.quantite_stock > 0));
     });
   }
 
   useEffect(load, []);
 
+  const lotChoisi = lots.find((l) => l.id_lot === Number(form.idLot));
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!lotChoisi) return;
     try {
       await createReforme({
-        idArticle: Number(form.idArticle),
+        idArticle: lotChoisi.id_article,
+        idLot: lotChoisi.id_lot,
         quantite: Number(form.quantite),
         motif: form.motif || undefined,
         valeur: form.valeur ? Number(form.valeur) : undefined,
@@ -38,7 +42,7 @@ export default function ReformeList() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Supprimer cette réforme ?")) return;
+    if (!confirm("Supprimer cette réforme ? (le stock ne sera pas restauré automatiquement)")) return;
     await deleteReforme(id);
     load();
   }
@@ -64,14 +68,14 @@ export default function ReformeList() {
         >
           <select
             required
-            value={form.idArticle}
-            onChange={(e) => setForm({ ...form, idArticle: e.target.value })}
+            value={form.idLot}
+            onChange={(e) => setForm({ ...form, idLot: e.target.value })}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm col-span-2"
           >
-            <option value="">Article</option>
-            {articles.map((a) => (
-              <option key={a.id_article} value={a.id_article}>
-                {a.nom_article}
+            <option value="">Lot concerné (le stock réel sera décrémenté)</option>
+            {lots.map((l) => (
+              <option key={l.id_lot} value={l.id_lot}>
+                {l.nom_article} — {l.num_lot} — {l.nom_magasin ?? "sans magasin"} (stock : {l.quantite_stock})
               </option>
             ))}
           </select>
@@ -79,7 +83,8 @@ export default function ReformeList() {
             required
             type="number"
             min="1"
-            placeholder="Quantité"
+            max={lotChoisi?.quantite_stock ?? undefined}
+            placeholder={`Quantité${lotChoisi ? ` (max ${lotChoisi.quantite_stock})` : ""}`}
             value={form.quantite}
             onChange={(e) => setForm({ ...form, quantite: e.target.value })}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm"

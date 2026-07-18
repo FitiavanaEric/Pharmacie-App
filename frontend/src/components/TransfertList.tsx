@@ -1,39 +1,41 @@
 import { useEffect, useState } from "react";
-import { createTransfert, deleteTransfert, getArticles, getMagasins, getTransferts } from "../services/api";
-import type { Article, Magasin, Transfert } from "../types";
-
-const emptyForm = { idArticle: "", quantite: "", magasinSource: "", magasinDestination: "" };
+import { createTransfert, deleteTransfert, getLots, getMagasins, getTransferts } from "../services/api";
+import type { Lot, Magasin, Transfert } from "../types";
 
 export default function TransfertList() {
   const [transferts, setTransferts] = useState<Transfert[]>([]);
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [lots, setLots] = useState<Lot[]>([]);
   const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [idLot, setIdLot] = useState("");
+  const [quantite, setQuantite] = useState("");
+  const [magasinDestination, setMagasinDestination] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    Promise.all([getTransferts(), getArticles(), getMagasins().catch(() => [])]).then(
-      ([t, a, m]) => {
-        setTransferts(t);
-        setArticles(a);
-        setMagasins(m);
-      }
-    );
+    Promise.all([getTransferts(), getLots(), getMagasins()]).then(([t, l, m]) => {
+      setTransferts(t);
+      setLots(l.filter((x) => x.quantite_stock > 0));
+      setMagasins(m);
+    });
   }
 
   useEffect(load, []);
+
+  const lotChoisi = lots.find((l) => l.id_lot === Number(idLot));
+  const magasinsDisponibles = magasins.filter((m) => m.id_magasin !== lotChoisi?.id_magasin);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
       await createTransfert({
-        idArticle: Number(form.idArticle),
-        quantite: Number(form.quantite),
-        magasinSource: form.magasinSource ? Number(form.magasinSource) : undefined,
-        magasinDestination: form.magasinDestination ? Number(form.magasinDestination) : undefined,
-      });
-      setForm(emptyForm);
+        idLot: Number(idLot),
+        quantite: Number(quantite),
+        magasinDestination: Number(magasinDestination),
+      } as any);
+      setIdLot("");
+      setQuantite("");
+      setMagasinDestination("");
       setShowForm(false);
       load();
     } catch (err: any) {
@@ -42,7 +44,7 @@ export default function TransfertList() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Supprimer ce transfert ?")) return;
+    if (!confirm("Supprimer ce transfert ? (le stock ne sera pas remis en place automatiquement)")) return;
     await deleteTransfert(id);
     load();
   }
@@ -60,13 +62,6 @@ export default function TransfertList() {
       </div>
 
       {error && <div className="mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm">{error}</div>}
-      {magasins.length === 0 && (
-        <div className="mb-4 p-3 rounded-md bg-amber-50 text-amber-700 text-sm">
-          Aucun magasin enregistré. Ajoute un magasin directement dans la table <code>magasin</code>{" "}
-          (phpMyAdmin) pour pouvoir choisir une source/destination — sinon le transfert reste possible
-          sans indiquer de magasin.
-        </div>
-      )}
 
       {showForm && (
         <form
@@ -75,14 +70,14 @@ export default function TransfertList() {
         >
           <select
             required
-            value={form.idArticle}
-            onChange={(e) => setForm({ ...form, idArticle: e.target.value })}
+            value={idLot}
+            onChange={(e) => setIdLot(e.target.value)}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm col-span-2"
           >
-            <option value="">Article</option>
-            {articles.map((a) => (
-              <option key={a.id_article} value={a.id_article}>
-                {a.nom_article}
+            <option value="">Lot source (article + magasin actuel)</option>
+            {lots.map((l) => (
+              <option key={l.id_lot} value={l.id_lot}>
+                {l.nom_article} — {l.num_lot} — {l.nom_magasin ?? "sans magasin"} (stock : {l.quantite_stock})
               </option>
             ))}
           </select>
@@ -90,30 +85,20 @@ export default function TransfertList() {
             required
             type="number"
             min="1"
-            placeholder="Quantité"
-            value={form.quantite}
-            onChange={(e) => setForm({ ...form, quantite: e.target.value })}
-            className="border border-gray-200 rounded-md px-3 py-2 text-sm col-span-2"
+            max={lotChoisi?.quantite_stock ?? undefined}
+            placeholder={`Quantité${lotChoisi ? ` (max ${lotChoisi.quantite_stock})` : ""}`}
+            value={quantite}
+            onChange={(e) => setQuantite(e.target.value)}
+            className="border border-gray-200 rounded-md px-3 py-2 text-sm"
           />
           <select
-            value={form.magasinSource}
-            onChange={(e) => setForm({ ...form, magasinSource: e.target.value })}
-            className="border border-gray-200 rounded-md px-3 py-2 text-sm"
-          >
-            <option value="">Magasin source</option>
-            {magasins.map((m) => (
-              <option key={m.id_magasin} value={m.id_magasin}>
-                {m.nom_magasin}
-              </option>
-            ))}
-          </select>
-          <select
-            value={form.magasinDestination}
-            onChange={(e) => setForm({ ...form, magasinDestination: e.target.value })}
+            required
+            value={magasinDestination}
+            onChange={(e) => setMagasinDestination(e.target.value)}
             className="border border-gray-200 rounded-md px-3 py-2 text-sm"
           >
             <option value="">Magasin destination</option>
-            {magasins.map((m) => (
+            {magasinsDisponibles.map((m) => (
               <option key={m.id_magasin} value={m.id_magasin}>
                 {m.nom_magasin}
               </option>
@@ -123,7 +108,7 @@ export default function TransfertList() {
             type="submit"
             className="col-span-2 bg-pharma-600 text-white text-sm py-2 rounded-md hover:bg-pharma-700"
           >
-            Enregistrer
+            Transférer
           </button>
         </form>
       )}

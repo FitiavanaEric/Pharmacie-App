@@ -38,6 +38,8 @@ export interface Lot {
   emplacement?: string;
   id_article: number;
   nom_article?: string;
+  id_magasin?: number;
+  nom_magasin?: string;
 }
 
 export interface Client {
@@ -160,9 +162,67 @@ export interface Magasin {
   adresse?: string;
 }
 
+export interface Employe {
+  id_employe: number;
+  nom: string;
+  prenom?: string;
+  fonction: string;
+  num_ordre_pharmacien?: string;
+}
+
+export interface ClientMutuelleLink {
+  id_client: number;
+  nom_client: string;
+  prenom_client?: string;
+  id_mutuelle: number;
+  nom_mutuelle: string;
+  taux_remboursement: number;
+  date_adhesion: string;
+}
+
 export interface RapportStats {
   ventesParJour: { date_vente: string; total: number; nombre: number }[];
-  topArticles: { nom_article: string; quantite_totale: number; montant_total: number }[];
+  topArticles: {
+    nom_article: string;
+    quantite_totale: number;
+    montant_total: number;
+    cout_achat_moyen: number;
+    marge_estimee: number;
+  }[];
   valeurStock: number;
   parModePaiement: { mode_paiement: string; nombre: number; total: number }[];
+  margeGlobale: {
+    chiffreAffaires: number;
+    coutTotal: number;
+    margeTotale: number;
+  };
+  rotationStock: {
+    nom_article: string;
+    stock_actuel: number;
+    quantite_vendue_30j: number;
+    taux_rotation: number;
+  }[];
+  comparaisonPeriodes: {
+    periodeActuelle: { total: number; nombre: number };
+    periodePrecedente: { total: number; nombre: number };
+    evolutionPourcent: number | null;
+  };
+}
+
+export type Role = "admin" | "pharmacien" | "gestionnaire_stock" | "caissier" | "responsable_achats";
+
+export interface CurrentUser {
+  username: string;
+  role: Role;
+}
+
+export interface Utilisateur {
+  id_utilisateur: number;
+  username: string;
+  role: Role;
+  actif: boolean;
+  date_creation: string;
+  id_employe?: number;
+  nom_employe?: string;
+  prenom_employe?: string;
 }

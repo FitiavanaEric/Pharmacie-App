@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/helpers.php";
+require_once __DIR__ . "/../config/auth_guard.php";
 
 sendCorsHeaders();
+requireAuth();
 
 $pdo = getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -75,8 +77,8 @@ switch ($method) {
                  VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
             $stmtLot = $pdo->prepare(
-                "INSERT INTO lot (num_lot, date_peremption, quantite_stock, id_article)
-                 VALUES (?, ?, ?, ?)"
+                "INSERT INTO lot (num_lot, date_peremption, quantite_stock, id_article, id_magasin)
+                 VALUES (?, ?, ?, ?, ?)"
             );
 
             foreach ($data['lignes'] as $l) {
@@ -98,6 +100,7 @@ switch ($method) {
                         $l['datePeremption'],
                         $conforme,
                         $l['idArticle'],
+                        $data['idMagasin'] ?? null,
                     ]);
                 }
             }

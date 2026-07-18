@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/helpers.php";
+require_once __DIR__ . "/../config/auth_guard.php";
 
 sendCorsHeaders();
+requireAuth();
 
 $pdo = getConnection();
 $method = $_SERVER['REQUEST_METHOD'];

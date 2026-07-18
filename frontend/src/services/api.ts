@@ -2,7 +2,10 @@ import type {
   Article,
   BonCommande,
   Client,
+  ClientMutuelleLink,
+  CurrentUser,
   DashboardStats,
+  Employe,
   Fournisseur,
   LigneCommandeInput,
   LigneReceptionInput,
@@ -16,6 +19,7 @@ import type {
   Reforme,
   Transfert,
   TypeArticle,
+  Utilisateur,
   Vente,
 } from "../types";
 
@@ -25,6 +29,7 @@ export const API_URL = "http://127.0.0.1:8080/api";
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}/${path}`, {
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     ...options,
   });
   if (!res.ok) {
@@ -33,6 +38,30 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   return res.json();
 }
+
+// --- Authentification ---
+export const login = (username: string, password: string) =>
+  request<{ success: boolean; user: CurrentUser }>("auth.php?action=login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+export const logout = () => request("auth.php?action=logout", { method: "POST" });
+export const getCurrentUser = () => request<CurrentUser>("auth.php?action=me");
+
+// --- Utilisateurs (admin uniquement) ---
+export const getUtilisateurs = () => request<Utilisateur[]>("utilisateurs.php");
+export const createUtilisateur = (data: {
+  username: string;
+  password: string;
+  role: string;
+  idEmploye?: number;
+}) => request("utilisateurs.php", { method: "POST", body: JSON.stringify(data) });
+export const updateUtilisateur = (
+  id: number,
+  data: { role: string; actif?: boolean; password?: string }
+) => request(`utilisateurs.php?id=${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteUtilisateur = (id: number) =>
+  request(`utilisateurs.php?id=${id}`, { method: "DELETE" });
 
 // --- Fournisseurs ---
 export const getFournisseurs = () => request<Fournisseur[]>("fournisseurs.php");
@@ -131,10 +160,10 @@ export const createReception = (data: {
 // --- Transferts ---
 export const getTransferts = () => request<Transfert[]>("transferts.php");
 export const createTransfert = (data: {
-  idArticle: number;
+  idLot: number;
   quantite: number;
-  magasinSource?: number;
-  magasinDestination?: number;
+  magasinDestination: number;
+  emplacement?: string;
 }) => request("transferts.php", { method: "POST", body: JSON.stringify(data) });
 export const deleteTransfert = (id: number) =>
   request(`transferts.php?id=${id}`, { method: "DELETE" });
@@ -162,6 +191,29 @@ export const deleteMutuelle = (id: number) =>
 
 // --- Magasins (utilise pour les transferts) ---
 export const getMagasins = () => request<Magasin[]>("magasins.php");
+export const createMagasin = (data: Partial<Magasin>) =>
+  request("magasins.php", { method: "POST", body: JSON.stringify(data) });
+export const deleteMagasin = (id: number) =>
+  request(`magasins.php?id=${id}`, { method: "DELETE" });
+
+// --- Employes ---
+export const getEmployes = () => request<Employe[]>("employes.php");
+export const createEmploye = (data: Partial<Employe>) =>
+  request("employes.php", { method: "POST", body: JSON.stringify(data) });
+export const updateEmploye = (id: number, data: Partial<Employe>) =>
+  request(`employes.php?id=${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteEmploye = (id: number) =>
+  request(`employes.php?id=${id}`, { method: "DELETE" });
+
+// --- Lien Client <-> Mutuelle ---
+export const getClientMutuelles = () => request<ClientMutuelleLink[]>("client_mutuelle.php");
+export const linkClientMutuelle = (idClient: number, idMutuelle: number) =>
+  request("client_mutuelle.php", {
+    method: "POST",
+    body: JSON.stringify({ idClient, idMutuelle }),
+  });
+export const unlinkClientMutuelle = (idClient: number, idMutuelle: number) =>
+  request(`client_mutuelle.php?idClient=${idClient}&idMutuelle=${idMutuelle}`, { method: "DELETE" });
 
 // --- Rapports ---
 export const getRapports = () => request<RapportStats>("rapports.php");

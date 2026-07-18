@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/helpers.php";
+require_once __DIR__ . "/../config/auth_guard.php";
 
 sendCorsHeaders();
+requireAuth();
 
 $pdo = getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -24,12 +26,21 @@ switch ($method) {
 
     case 'POST':
         $data = getRequestBody();
-        if (empty($data['idArticle']) || empty($data['quantite'])) {
-            jsonError("Article et quantite requis");
+        if (empty($data['idArticle']) || empty($data['quantite']) || empty($data['idLot'])) {
+            jsonError("Article, lot precis et quantite requis pour decrementer le stock");
         }
 
         try {
             $pdo->beginTransaction();
+
+            // Verifie et decremente le stock du lot AVANT d'enregistrer la reforme
+            $stmtStock = $pdo->prepare(
+                "UPDATE lot SET quantite_stock = quantite_stock - ? WHERE id_lot = ? AND quantite_stock >= ?"
+            );
+            $stmtStock->execute([$data['quantite'], $data['idLot'], $data['quantite']]);
+            if ($stmtStock->rowCount() === 0) {
+                throw new Exception("Stock insuffisant sur ce lot pour cette quantite");
+            }
 
             $stmt = $pdo->prepare(
                 "INSERT INTO reforme (date_reforme, quantite, motif, valeur, id_article)
@@ -42,14 +53,6 @@ switch ($method) {
                 $data['idArticle'],
             ]);
             $idReforme = $pdo->lastInsertId();
-
-            // Decremente le stock si un lot precis est indique
-            if (!empty($data['idLot'])) {
-                $stmtStock = $pdo->prepare(
-                    "UPDATE lot SET quantite_stock = quantite_stock - ? WHERE id_lot = ? AND quantite_stock >= ?"
-                );
-                $stmtStock->execute([$data['quantite'], $data['idLot'], $data['quantite']]);
-            }
 
             $pdo->commit();
             jsonResponse(["success" => true, "id" => $idReforme], 201);

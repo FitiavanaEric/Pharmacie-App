@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . "/../config/database.php";
 require_once __DIR__ . "/../config/helpers.php";
+require_once __DIR__ . "/../config/auth_guard.php";
 
 sendCorsHeaders();
+requireAuth();
 
 $pdo = getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -11,9 +13,11 @@ $id = $_GET['id'] ?? null;
 const SELECT_BASE = "
     SELECT l.id_lot, l.num_lot, l.date_fabrication, l.date_peremption,
            l.quantite_stock, l.emplacement,
-           l.id_article, a.nom_article
+           l.id_article, a.nom_article,
+           l.id_magasin, m.nom_magasin
     FROM lot l
     JOIN article a ON a.id_article = l.id_article
+    LEFT JOIN magasin m ON m.id_magasin = l.id_magasin
 ";
 
 switch ($method) {
@@ -45,8 +49,8 @@ switch ($method) {
             jsonError("Numero de lot et article requis");
         }
         $stmt = $pdo->prepare(
-            "INSERT INTO lot (num_lot, date_fabrication, date_peremption, quantite_stock, emplacement, id_article)
-             VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO lot (num_lot, date_fabrication, date_peremption, quantite_stock, emplacement, id_article, id_magasin)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $data['numLot'],
@@ -55,6 +59,7 @@ switch ($method) {
             $data['quantiteStock'] ?? 0,
             $data['emplacement'] ?? null,
             $data['idArticle'],
+            $data['idMagasin'] ?? null,
         ]);
         jsonResponse(["success" => true, "id" => $pdo->lastInsertId()], 201);
         break;
