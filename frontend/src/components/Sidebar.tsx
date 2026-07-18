@@ -1,6 +1,7 @@
 export type Page =
   | "dashboard"
   | "articles"
+  | "typesArticle"
   | "lots"
   | "ventes"
   | "ordonnances"
@@ -36,6 +37,7 @@ const SECTIONS: { title: string; items: { key: Page; label: string }[] }[] = [
     title: "Stock & achats",
     items: [
       { key: "articles", label: "Articles" },
+      { key: "typesArticle", label: "Types d'article" },
       { key: "lots", label: "Stock / Lots" },
       { key: "achats", label: "Achats" },
       { key: "receptions", label: "Réceptions" },

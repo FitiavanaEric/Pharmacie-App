@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar, { Page } from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import ArticleList from "./components/ArticleList";
+import TypeArticleList from "./components/TypeArticleList";
 import LotList from "./components/LotList";
 import VenteList from "./components/VenteList";
 import OrdonnanceList from "./components/OrdonnanceList";
@@ -23,6 +24,8 @@ export default function App() {
         return <Dashboard />;
       case "articles":
         return <ArticleList />;
+      case "typesArticle":
+        return <TypeArticleList />;
       case "lots":
         return <LotList />;
       case "ventes":
